@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>二手房硬装进度表</title>
+  <style>
+    :root {
+      --bg: #f3f5f2;
+      --surface: #fbfcfa;
+      --surface-2: #eef1ec;
+      --text: #1d2420;
+      --muted: #667069;
+      --line: #d9ded8;
+      --accent: #c94f2d;
+      --accent-soft: #f5e3dc;
+      --success: #287351;
+      --success-soft: #deeee6;
+      --warning-soft: #f8eee2;
+      --shadow: 0 18px 50px rgba(40, 52, 44, .08);
+      --radius: 16px;
+      --font: "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #171b18;
+      --surface: #202521;
+      --surface-2: #292f2a;
+      --text: #eef2ee;
+      --muted: #aab3ac;
+      --line: #39413b;
+      --accent: #e17450;
+      --accent-soft: #4b2d23;
+      --success: #70bd94;
+      --success-soft: #213b2d;
+      --warning-soft: #3c3025;
+      --shadow: 0 20px 55px rgba(0, 0, 0, .24);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.65;
+      transition: background-color .25s ease, color .25s ease;
+    }
+
+    button, input, textarea { font: inherit; }
+    button { color: inherit; }
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--accent) 42%, transparent);
+      outline-offset: 2px;
+    }
+
+    .app-shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 72px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    .brand { min-width: 0; }
+    .brand p { margin: 0 0 2px; color: var(--muted); font-size: 13px; }
+    .brand h1 { margin: 0; font-size: clamp(22px, 3vw, 32px); line-height: 1.25; letter-spacing: -.04em; }
+
+    .toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .btn {
+      min-height: 42px;
+      padding: 8px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease, background-color .18s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover { border-color: var(--accent); }
+    .btn:active { transform: translateY(1px) scale(.98); }
+    .btn.primary { border-color: var(--accent); background: var(--accent); color: #fffaf7; }
+    .btn.danger { color: var(--accent); }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .overview,
+    .current-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .overview {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: clamp(20px, 4vw, 44px);
+      padding: clamp(22px, 4vw, 38px);
+    }
+
+    .progress-ring {
+      --progress: 0deg;
+      width: 138px;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      position: relative;
+      border-radius: 50%;
+      background: conic-gradient(var(--accent) var(--progress), var(--surface-2) 0);
+    }
+
+    .progress-ring::after {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      border-radius: 50%;
+      background: var(--surface);
+    }
+
+    .progress-value { position: relative; z-index: 1; text-align: center; }
+    .progress-value strong { display: block; font-size: 31px; line-height: 1.1; letter-spacing: -.05em; }
+    .progress-value span { color: var(--muted); font-size: 12px; }
+
+    .overview-copy h2 { margin: 0 0 8px; font-size: clamp(22px, 3vw, 34px); letter-spacing: -.04em; }
+    .overview-copy > p { margin: 0 0 22px; color: var(--muted); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat { padding-top: 12px; border-top: 1px solid var(--line); }
+    .stat strong { display: block; font-size: 20px; line-height: 1.25; }
+    .stat span { color: var(--muted); font-size: 12px; }
+
+    .current-panel { padding: 24px; display: flex; flex-direction: column; justify-content: space-between; }
+    .current-panel .label { margin: 0; color: var(--accent); font-size: 13px; font-weight: 700; }
+    .current-panel h2 { margin: 10px 0 8px; font-size: 22px; line-height: 1.35; }
+    .current-panel .phase-name { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+    .current-panel .btn { width: 100%; }
+
+    .controlbar {
+      position: sticky;
+      top: 10px;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--surface) 90%, transparent);
+      box-shadow: 0 12px 30px rgba(40, 52, 44, .07);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .filters { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+    .filters::-webkit-scrollbar { display: none; }
+    .filter-btn { min-height: 38px; padding: 7px 13px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; white-space: nowrap; }
+    .filter-btn.active { background: var(--surface-2); color: var(--text); font-weight: 700; }
+    .save-state { flex: 0 0 auto; color: var(--muted); font-size: 12px; padding-right: 6px; }
+
+    .phase {
+      margin-top: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: clip;
+    }
+
+    .phase-head {
+      width: 100%;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 22px;
+      border: 0;
+      background: var(--surface);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .phase-index {
+      width: 44px;
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--surface-2);
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .phase-title strong { display: block; font-size: 18px; }
+    .phase-title span { color: var(--muted); font-size: 13px; }
+    .phase-meta { display: flex; align-items: center; gap: 12px; }
+    .phase-count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .chevron { font-size: 18px; transition: transform .2s ease; }
+    .phase.collapsed .chevron { transform: rotate(-90deg); }
+    .phase.collapsed .step-list { display: none; }
+
+    .phase-line { height: 3px; background: var(--surface-2); }
+    .phase-line span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s ease; }
+
+    .step-list { padding: 0 22px 22px; }
+
+    .step-card {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr);
+      gap: 16px;
+      padding: 22px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .step-card:last-child { border-bottom: 0; padding-bottom: 0; }
+    .step-card[hidden] { display: none; }
+
+    .step-number {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--muted);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .step-card[data-status="doing"] .step-number { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+    .step-card[data-status="done"] .step-number { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+
+    .step-main { min-width: 0; }
+    .step-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .step-title { margin: 0; font-size: 18px; line-height: 1.45; }
+
+    .status-control {
+      flex: 0 0 auto;
+      display: flex;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface-2);
+    }
+
+    .status-btn {
+      min-height: 34px;
+      padding: 5px 10px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .status-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 9px rgba(35, 45, 38, .08); font-weight: 700; }
+    .status-btn[data-value="doing"].active { color: var(--accent); }
+    .status-btn[data-value="done"].active { color: var(--success); }
+
+    .detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 16px; }
+    .detail { padding: 15px 16px; border-radius: 12px; background: var(--surface-2); }
+    .detail.reminder { background: var(--warning-soft); }
+    .detail h4 { margin: 0 0 7px; font-size: 13px; }
+    .detail p { margin: 0; color: var(--muted); font-size: 14px; white-space: pre-line; }
+
+    .step-fields { display: grid; grid-template-columns: minmax(160px, .55fr) minmax(160px, .55fr) minmax(240px, 1.4fr); gap: 12px; margin-top: 12px; }
+    .field label { display: block; margin: 0 0 6px; color: var(--muted); font-size: 12px; }
+    .field input,
+    .field textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .field input { height: 42px; padding: 8px 11px; }
+    .field textarea { min-height: 42px; padding: 9px 11px; resize: vertical; line-height: 1.45; }
+    .field input::placeholder, .field textarea::placeholder { color: color-mix(in srgb, var(--muted) 80%, transparent); }
+
+    .date-control {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 7px;
+    }
+
+    .field .date-input {
+      min-width: 0;
+      height: 46px;
+      padding: 8px 10px 8px 12px;
+      cursor: pointer;
+      font-weight: 650;
+      font-variant-numeric: tabular-nums;
+      color-scheme: light;
+      transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+    }
+
+    :root[data-theme="dark"] .field .date-input { color-scheme: dark; }
+    .field .date-input:hover { border-color: var(--accent); background: var(--surface-2); }
+    .field .date-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
+
+    .field .date-input::-webkit-calendar-picker-indicator {
+      width: 22px;
+      height: 22px;
+      margin: -7px;
+      padding: 8px;
+      cursor: pointer;
+      opacity: .82;
+    }
+
+    .date-today {
+      height: 46px;
+      min-width: 54px;
+      padding: 0 11px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface-2);
+      color: var(--accent);
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease, background-color .18s ease;
+    }
+
+    .date-today:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .date-today:active { transform: translateY(1px) scale(.97); }
+
+    .footer-note { margin: 24px 0 0; color: var(--muted); text-align: center; font-size: 12px; }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 20;
+      padding: 11px 15px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--text);
+      color: var(--surface);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    dialog {
+      width: min(430px, calc(100% - 32px));
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+
+    dialog::backdrop { background: rgba(15, 20, 17, .48); backdrop-filter: blur(3px); }
+    dialog h2 { margin: 0 0 8px; }
+    dialog p { margin: 0 0 20px; color: var(--muted); }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; }
+      .current-panel { min-height: 210px; }
+      .step-fields { grid-template-columns: 1fr 1fr; }
+      .step-fields .field:last-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 680px) {
+      .app-shell { width: min(100% - 22px, 1180px); padding-top: 18px; }
+      .topbar { align-items: flex-start; }
+      .toolbar .btn:not(#themeBtn) { display: none; }
+      .overview { grid-template-columns: 1fr; text-align: center; }
+      .progress-ring { width: 122px; margin: 0 auto; }
+      .stats { text-align: left; }
+      .controlbar { top: 6px; }
+      .save-state { display: none; }
+      .phase-head { grid-template-columns: auto 1fr; padding: 17px 15px; }
+      .phase-meta { grid-column: 2; justify-content: space-between; }
+      .step-list { padding: 0 15px 15px; }
+      .step-card { grid-template-columns: 1fr; gap: 10px; padding: 18px 0; }
+      .step-number { width: 38px; height: 38px; }
+      .step-top { flex-direction: column; }
+      .status-control { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); }
+      .detail-grid, .step-fields { grid-template-columns: 1fr; }
+      .step-fields .field:last-child { grid-column: auto; }
+      .mobile-tools { display: grid; }
+    }
+
+    @media (min-width: 681px) { .mobile-tools { display: none; } }
+
+    .mobile-tools { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+    .mobile-tools .btn { padding-inline: 8px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+
+    @media print {
+      :root { --bg: #fff; --surface: #fff; --surface-2: #f5f5f5; --text: #111; --muted: #555; --line: #ccc; }
+      .toolbar, .controlbar, .status-control, .mobile-tools, .toast, dialog { display: none !important; }
+      .app-shell { width: 100%; padding: 0; }
+      .hero { grid-template-columns: 1fr 1fr; }
+      .phase { break-inside: avoid; box-shadow: none; }
+      .phase.collapsed .step-list { display: block; }
+      .step-card[hidden] { display: grid; }
+      .field textarea, .field input { border-color: #bbb; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <p>铲至红砖层版</p>
+        <h1>二手房硬装进度表</h1>
+      </div>
+      <div class="toolbar" aria-label="数据工具">
+        <button class="btn" id="exportBtn" type="button">导出备份</button>
+        <button class="btn" id="importBtn" type="button">导入进度</button>
+        <button class="btn danger" id="resetBtn" type="button">清空</button>
+        <button class="btn" id="themeBtn" type="button" aria-label="切换颜色模式">深色</button>
+      </div>
+    </header>
+
+    <section class="hero" aria-label="总体进度">
+      <div class="overview">
+        <div class="progress-ring" id="progressRing" role="img" aria-label="总体完成进度 0%">
+          <div class="progress-value"><strong id="progressPercent">0%</strong><span>总体完成</span></div>
+        </div>
+        <div class="overview-copy">
+          <h2 id="overviewTitle">准备开工</h2>
+          <p id="overviewText">每完成一步，家的轮廓就更清楚一点。</p>
+          <div class="stats">
+            <div class="stat"><strong id="doneCount">0</strong><span>已完成</span></div>
+            <div class="stat"><strong id="doingCount">0</strong><span>进行中</span></div>
+            <div class="stat"><strong id="costTotal">¥0</strong><span>已记录费用</span></div>
+          </div>
+        </div>
+      </div>
+      <aside class="current-panel">
+        <div>
+          <p class="label">当前建议关注</p>
+          <h2 id="currentTitle">1. 办理装修许可</h2>
+          <p class="phase-name" id="currentPhase">第一阶段：准备期</p>
+        </div>
+        <button class="btn primary" id="jumpBtn" type="button">查看当前步骤</button>
+      </aside>
+    </section>
+
+    <div class="mobile-tools" aria-label="移动端数据工具">
+      <button class="btn" id="mobileExportBtn" type="button">导出</button>
+      <button class="btn" id="mobileImportBtn" type="button">导入</button>
+      <button class="btn danger" id="mobileResetBtn" type="button">清空</button>
+    </div>
+
+    <nav class="controlbar" aria-label="进度筛选">
+      <div class="filters" id="filters">
+        <button class="filter-btn active" type="button" data-filter="all">全部 22</button>
+        <button class="filter-btn" type="button" data-filter="todo">未开始</button>
+        <button class="filter-btn" type="button" data-filter="doing">进行中</button>
+        <button class="filter-btn" type="button" data-filter="done">已完成</button>
+      </div>
+      <span class="save-state" id="saveState">进度保存在本机</span>
+    </nav>
+
+    <div id="phaseContainer"></div>
+    <p class="footer-note">数据仅保存在当前浏览器。换设备或清理浏览器数据前，请先导出备份。</p>
+  </main>
+
+  <input type="file" id="fileInput" accept="application/json,.json" hidden>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="resetDialog">
+    <h2>清空全部进度？</h2>
+    <p>状态、完成日期、费用和备注都会被删除。此操作无法撤销。</p>
+    <div class="dialog-actions">
+      <button class="btn" id="cancelResetBtn" type="button">取消</button>
+      <button class="btn primary" id="confirmResetBtn" type="button">确认清空</button>
+    </div>
+  </dialog>
+
+  <script>
+    const STORAGE_KEY = "renovation-progress-red-brick-v1";
+
+    const phases = [
+      {
+        id: 1,
+        title: "第一阶段：准备期",
+        time: "开工前1-2周",
+        steps: [
+          { id: 1, title: "办理装修许可", work: "去物业签《装饰装修管理协议》、交押金。", reminder: "问清垃圾堆放点、清运车报价、施工时间限制。提前说明铲到红砖垃圾量很大，尽量约定清楚计价方式和封顶金额，避免临时加价。" },
+          { id: 2, title: "约设计师或工长量房", work: "实测尺寸、勘测原始结构。", reminder: "重点看承重墙位置、梁柱、下水管道。同时确认全屋墙面是否必须铲到红砖。部分水泥层牢固的墙面可以只处理表层。" },
+          { id: 3, title: "确定设计方案和主材", work: "确定平面布局、水电点位、瓷砖、地板、门窗型号，并安排长周期产品。", reminder: "瓷砖、窗户、门等通常有生产周期，提前确定款式和交期，避免后期停工等货。定制产品先定方案，尺寸稳定后再复尺。" }
+        ]
+      },
+      {
+        id: 2,
+        title: "第二阶段：拆旧、砌墙、粉墙、封窗",
+        time: "开工第1-4周",
+        steps: [
+          { id: 4, title: "全屋拆除", work: "敲除设计范围内的非承重隔墙，铲墙皮，拆除旧地砖或地板，按确认范围处理旧水泥砂浆层。", reminder: "拆前确认结构安全。下水管口使用可靠盖帽封堵，公共区域和保留设备先保护。拆旧、短驳和清运分别写清计价方式。" },
+          { id: 5, title: "砌新墙和墙面粉刷", work: "按设计砌隔断墙、设置门洞过梁，对红砖墙进行基层处理和水泥砂浆找平。", reminder: "新旧墙连接、不同材料交界和管槽修补位置应做可靠防裂处理。粉墙后按材料和现场条件养护，待基层达到后续施工要求再进行下一道工序。" },
+          { id: 6, title: "更换窗户", work: "拆除旧窗，安装新窗框，处理框墙缝隙、外侧防水密封和内侧收口。", reminder: "安装当天检查水平、垂直、启闭和排水。外侧防雨密封不要无保护地拖到后期，瓷砖或乳胶漆收口不能替代窗框防水。" }
+        ]
+      },
+      {
+        id: 3,
+        title: "第三阶段：水电改造",
+        time: "开工第5-7周",
+        steps: [
+          { id: 7, title: "水电交底", work: "设计师、工长、水电工、业主到场，现场确定开关、插座、给排水和设备位置。", reminder: "重点确认厨房电器、浴室柜墙排或地排、智能马桶、全屋网络、弱电箱、空调、新风和检修口。完成后形成点位图。" },
+          { id: 8, title: "水电开槽和布管穿线", work: "根据图纸开槽，安装水管、电管、底盒和线缆。", reminder: "按点位、实测工程量或闭口总价约定计价。强弱电、燃气、空调冷凝水和吊顶设备要综合排布，避免交叉冲突。" },
+          { id: 9, title: "水电隐蔽验收", work: "按管材和设计要求进行水管压力试验，检查排水通畅，完成电路绝缘和通断测试。", reminder: "业主到场并拍摄带定位参照的全屋管线照片。检查下水口、回路标识、漏电保护及卫生间等电位连接。验收合格后再封槽。" }
+        ]
+      },
+      {
+        id: 4,
+        title: "第四阶段：瓦工",
+        time: "开工第8-10周",
+        steps: [
+          { id: 10, title: "厨卫和阳台防水", work: "处理基层、管根、阴阳角和门口节点，按设计范围涂刷防水材料。", reminder: "重点检查淋浴区、管根、门槛和地漏。完成后按约定时间做闭水试验，并到楼下确认无渗漏，拍照留档。" },
+          { id: 11, title: "铺贴墙地砖", work: "排版、预铺、铺贴墙砖和地砖，并处理阴阳角、门槛石和地漏坡度。", reminder: "提前确定对缝、通铺和收口方案。完工后检查空鼓、平整度、接缝、色差、地漏坡度及排水，问题砖及时标记整改。" },
+          { id: 12, title: "地面水泥找平", work: "为木地板等成品面层制作平整、牢固的基层。", reminder: "使用靠尺检查平整度，并按地板厂家要求检测基层含水率。不要只根据晾晒天数判断能否铺地板。" }
+        ]
+      },
+      {
+        id: 5,
+        title: "第五阶段：木工和油工",
+        time: "开工第11-14周",
+        steps: [
+          { id: 13, title: "吊顶和石膏板造型", work: "制作客厅吊顶、窗帘盒和背景墙基层。", reminder: "封板前完成中央空调、新风、排烟、检修口和灯具点位检查。对设备进行试运行或专项测试，并拍摄吊顶内隐蔽照片。" },
+          { id: 14, title: "墙面基层处理和刮腻子", work: "检查抹灰基层，处理裂缝风险位置，刮耐水腻子并逐遍干燥。", reminder: "新旧墙交界、不同材料交界和管槽修补处重点防裂。每遍腻子干透后再做下一遍，潮湿天气不要盲目赶工。" },
+          { id: 15, title: "墙面打磨和乳胶漆", work: "腻子打磨平整，按产品体系施工底漆和面漆。", reminder: "做好地面、门窗和柜体保护。用侧向强光检查波浪、砂痕、透底和流坠，修补完成后再验收。" }
+        ]
+      },
+      {
+        id: 6,
+        title: "第六阶段：安装季",
+        time: "开工第15-17周",
+        steps: [
+          { id: 16, title: "厨卫吊顶安装", work: "安装铝扣板或蜂窝大板吊顶，并安装相应灯具和设备。", reminder: "封顶前确认烟机排烟管、热水器排气管、止逆阀、浴霸和检修口位置，避免后期拆板返工。" },
+          { id: 17, title: "全屋定制安装", work: "橱柜、衣柜和浴室柜进场安装。", reminder: "检查板材、门板、抽屉、五金和合同是否一致，确认柜体垂直、门缝均匀和台面开孔。问题整改前保留合理尾款。" },
+          { id: 18, title: "室内门和地板安装", work: "根据完成面标高和厂家方案安装室内门、推拉门及木地板。", reminder: "门和地板的先后顺序要提前协调，并统一确认完成面高度和门底缝。铺地板前清洁基层并确认含水率合格。" },
+          { id: 19, title: "开关、插座和灯具安装", work: "安装面板、灯具和末端设备，并逐回路通电测试。", reminder: "逐个测试插座、开关、灯具、漏电保护器和网络点位。统一开关方向，核对配电箱回路标签。" },
+          { id: 20, title: "收尾垃圾清运", work: "清走安装和整改阶段产生的包装、余料及装修垃圾。", reminder: "按协议确认短驳和清运费用，现场核对实际投放量。保留同批次备用瓷砖、地板、乳胶漆和关键配件。" }
+        ]
+      },
+      {
+        id: 7,
+        title: "第七阶段：验收和保洁",
+        time: "开工第18周",
+        steps: [
+          { id: 21, title: "硬装整体验收", work: "检查墙面、瓷砖、给排水、电气、门窗、柜体、地板、设备和所有收口。", reminder: "准备充电器、靠尺、空鼓锤和纸巾等工具。逐项记录问题，形成整改清单，整改复验完成后再支付相应尾款。" },
+          { id: 22, title: "开荒保洁", work: "清洁玻璃、墙地面、柜体内外、五金、缝隙和施工残胶。", reminder: "家具进场前完成保洁。验收玻璃和石材是否划伤，避免使用不匹配的强酸强碱清洁剂损坏成品。" }
+        ]
+      }
+    ];
+
+    const allSteps = phases.flatMap(phase => phase.steps.map(step => ({ ...step, phaseId: phase.id, phaseTitle: phase.title })));
+    const defaultState = () => ({ version: 1, steps: {}, collapsed: {}, filter: "all", updatedAt: null });
+    let state = loadState();
+    let toastTimer;
+
+    function loadState() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return defaultState();
+        const parsed = JSON.parse(stored);
+        return { ...defaultState(), ...parsed, steps: parsed.steps || {}, collapsed: parsed.collapsed || {} };
+      } catch (error) {
+        return defaultState();
+      }
+    }
+
+    function stepState(id) {
+      return { status: "todo", date: "", cost: "", note: "", ...(state.steps[id] || {}) };
+    }
+
+    function saveState(message = "已自动保存") {
+      state.updatedAt = new Date().toISOString();
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        document.getElementById("saveState").textContent = message;
+      } catch (error) {
+        document.getElementById("saveState").textContent = "本地保存不可用，请导出备份";
+        showToast("浏览器阻止了本地保存，请使用导出备份");
+      }
+    }
+
+    function renderPhases() {
+      const container = document.getElementById("phaseContainer");
+      container.innerHTML = phases.map(phase => {
+        const collapsed = Boolean(state.collapsed[phase.id]);
+        return `
+          <section class="phase${collapsed ? " collapsed" : ""}" data-phase-id="${phase.id}">
+            <button class="phase-head" type="button" aria-expanded="${!collapsed}" aria-controls="phase-list-${phase.id}">
+              <span class="phase-index">${phase.id}</span>
+              <span class="phase-title"><strong>${phase.title}</strong><span>${phase.time}</span></span>
+              <span class="phase-meta"><span class="phase-count" id="phase-count-${phase.id}"></span><span class="chevron" aria-hidden="true">⌄</span></span>
+            </button>
+            <div class="phase-line" aria-hidden="true"><span id="phase-line-${phase.id}"></span></div>
+            <div class="step-list" id="phase-list-${phase.id}">
+              ${phase.steps.map(renderStep).join("")}
+            </div>
+          </section>`;
+      }).join("");
+      bindPhaseEvents();
+      applyFilter(state.filter || "all");
+      updateSummary();
+    }
+
+    function renderStep(step) {
+      const value = stepState(step.id);
+      const statuses = [
+        ["todo", "未开始"],
+        ["doing", "进行中"],
+        ["done", "已完成"]
+      ];
+      return `
+        <article class="step-card" id="step-${step.id}" data-step-id="${step.id}" data-status="${value.status}">
+          <div class="step-number">${String(step.id).padStart(2, "0")}</div>
+          <div class="step-main">
+            <div class="step-top">
+              <h3 class="step-title">${step.title}</h3>
+              <div class="status-control" role="group" aria-label="${step.title}状态">
+                ${statuses.map(([key, label]) => `<button class="status-btn${value.status === key ? " active" : ""}" type="button" data-value="${key}" aria-pressed="${value.status === key}">${label}</button>`).join("")}
+              </div>
+            </div>
+            <div class="detail-grid">
+              <div class="detail"><h4>做什么</h4><p>${step.work}</p></div>
+              <div class="detail reminder"><h4>费用和避坑提醒</h4><p>${step.reminder}</p></div>
+            </div>
+            <div class="step-fields">
+              <div class="field"><label for="date-${step.id}">完成日期</label><div class="date-control"><input class="date-input" id="date-${step.id}" data-field="date" type="date" value="${escapeAttribute(value.date)}"><button class="date-today" type="button" data-action="today" aria-label="将${step.title}的完成日期设为今天">今天</button></div></div>
+              <div class="field"><label for="cost-${step.id}">实际费用</label><input id="cost-${step.id}" data-field="cost" type="number" min="0" step="1" inputmode="decimal" placeholder="例如 5000" value="${escapeAttribute(value.cost)}"></div>
+              <div class="field"><label for="note-${step.id}">现场备注</label><textarea id="note-${step.id}" data-field="note" rows="1" placeholder="记录材料、问题、待办或验收结果">${escapeHtml(value.note)}</textarea></div>
+            </div>
+          </div>
+        </article>`;
+    }
+
+    function escapeHtml(value = "") {
+      return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+    }
+
+    function escapeAttribute(value = "") { return escapeHtml(value); }
+
+    function bindPhaseEvents() {
+      document.querySelectorAll(".phase-head").forEach(button => {
+        button.addEventListener("click", () => {
+          const phase = button.closest(".phase");
+          const id = phase.dataset.phaseId;
+          const collapsed = phase.classList.toggle("collapsed");
+          button.setAttribute("aria-expanded", String(!collapsed));
+          state.collapsed[id] = collapsed;
+          saveState();
+        });
+      });
+
+      document.querySelectorAll(".status-btn").forEach(button => {
+        button.addEventListener("click", () => {
+          const card = button.closest(".step-card");
+          setStatus(Number(card.dataset.stepId), button.dataset.value);
+        });
+      });
+
+      document.querySelectorAll("[data-field]").forEach(field => {
+        field.addEventListener("input", () => {
+          const card = field.closest(".step-card");
+          const id = Number(card.dataset.stepId);
+          state.steps[id] = { ...stepState(id), [field.dataset.field]: field.value };
+          saveState();
+          if (field.dataset.field === "cost") updateSummary();
+        });
+      });
+
+      document.querySelectorAll(".date-input").forEach(input => {
+        input.addEventListener("click", () => {
+          if (typeof input.showPicker === "function") {
+            try { input.showPicker(); } catch (error) { /* 保留浏览器原生日期选择 */ }
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-action="today"]').forEach(button => {
+        button.addEventListener("click", () => {
+          const input = button.closest(".field").querySelector('.date-input');
+          input.value = new Date().toISOString().slice(0, 10);
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          showToast("完成日期已设为今天");
+        });
+      });
+    }
+
+    function setStatus(id, status) {
+      const current = stepState(id);
+      const next = { ...current, status };
+      if (status === "done" && !next.date) next.date = new Date().toISOString().slice(0, 10);
+      state.steps[id] = next;
+
+      const card = document.getElementById(`step-${id}`);
+      card.dataset.status = status;
+      card.querySelectorAll(".status-btn").forEach(button => {
+        const active = button.dataset.value === status;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      card.querySelector('[data-field="date"]').value = next.date;
+
+      saveState();
+      updateSummary();
+      applyFilter(state.filter || "all");
+    }
+
+    function updateSummary() {
+      const values = allSteps.map(step => stepState(step.id));
+      const done = values.filter(value => value.status === "done").length;
+      const doing = values.filter(value => value.status === "doing").length;
+      const percent = Math.round(done / allSteps.length * 100);
+      const cost = values.reduce((sum, value) => sum + (Number(value.cost) || 0), 0);
+
+      document.getElementById("progressPercent").textContent = `${percent}%`;
+      const ring = document.getElementById("progressRing");
+      ring.style.setProperty("--progress", `${percent * 3.6}deg`);
+      ring.setAttribute("aria-label", `总体完成进度 ${percent}%`);
+      document.getElementById("doneCount").textContent = `${done}/${allSteps.length}`;
+      document.getElementById("doingCount").textContent = doing;
+      document.getElementById("costTotal").textContent = formatMoney(cost);
+
+      const title = document.getElementById("overviewTitle");
+      const text = document.getElementById("overviewText");
+      if (done === allSteps.length) {
+        title.textContent = "硬装全部完成";
+        text.textContent = "所有步骤均已完成，可以导出一份最终记录。";
+      } else if (doing > 0) {
+        title.textContent = "施工正在推进";
+        text.textContent = `已有 ${doing} 个步骤进行中，${allSteps.length - done} 个步骤尚未完成。`;
+      } else if (done > 0) {
+        title.textContent = "继续下一步";
+        text.textContent = `已经完成 ${done} 个步骤，保持节奏即可。`;
+      } else {
+        title.textContent = "准备开工";
+        text.textContent = "每完成一步，家的轮廓就更清楚一点。";
+      }
+
+      phases.forEach(phase => {
+        const phaseDone = phase.steps.filter(step => stepState(step.id).status === "done").length;
+        document.getElementById(`phase-count-${phase.id}`).textContent = `${phaseDone}/${phase.steps.length} 完成`;
+        document.getElementById(`phase-line-${phase.id}`).style.width = `${phaseDone / phase.steps.length * 100}%`;
+      });
+
+      const current = allSteps.find(step => stepState(step.id).status === "doing") || allSteps.find(step => stepState(step.id).status !== "done") || allSteps[allSteps.length - 1];
+      document.getElementById("currentTitle").textContent = `${current.id}. ${current.title}`;
+      document.getElementById("currentPhase").textContent = current.phaseTitle;
+      document.getElementById("jumpBtn").dataset.target = current.id;
+
+      document.querySelector('[data-filter="todo"]').textContent = `未开始 ${values.filter(value => value.status === "todo").length}`;
+      document.querySelector('[data-filter="doing"]').textContent = `进行中 ${doing}`;
+      document.querySelector('[data-filter="done"]').textContent = `已完成 ${done}`;
+    }
+
+    function formatMoney(value) {
+      return `¥${new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 }).format(value)}`;
+    }
+
+    function applyFilter(filter) {
+      state.filter = filter;
+      document.querySelectorAll(".filter-btn").forEach(button => button.classList.toggle("active", button.dataset.filter === filter));
+      document.querySelectorAll(".step-card").forEach(card => {
+        card.hidden = filter !== "all" && card.dataset.status !== filter;
+      });
+      document.querySelectorAll(".phase").forEach(phase => {
+        const visible = [...phase.querySelectorAll(".step-card")].some(card => !card.hidden);
+        phase.hidden = !visible;
+      });
+      saveState();
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
+    }
+
+    function exportProgress() {
+      const payload = { ...state, exportedAt: new Date().toISOString(), title: "二手房硬装进度表" };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `装修进度备份-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      showToast("进度备份已导出");
+    }
+
+    function importProgress(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const imported = JSON.parse(reader.result);
+          if (!imported || typeof imported !== "object" || !imported.steps) throw new Error("invalid");
+          state = { ...defaultState(), ...imported, steps: imported.steps || {}, collapsed: imported.collapsed || {} };
+          saveState("导入成功");
+          renderPhases();
+          showToast("进度已恢复");
+        } catch (error) {
+          showToast("无法导入，请选择本页面导出的备份文件");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function toggleTheme() {
+      const root = document.documentElement;
+      const isDark = root.dataset.theme === "dark";
+      root.dataset.theme = isDark ? "light" : "dark";
+      localStorage.setItem(`${STORAGE_KEY}-theme`, root.dataset.theme);
+      updateThemeLabel();
+    }
+
+    function updateThemeLabel() {
+      document.getElementById("themeBtn").textContent = document.documentElement.dataset.theme === "dark" ? "浅色" : "深色";
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem(`${STORAGE_KEY}-theme`);
+      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = saved || (prefersDark ? "dark" : "light");
+      updateThemeLabel();
+    }
+
+    document.getElementById("filters").addEventListener("click", event => {
+      const button = event.target.closest(".filter-btn");
+      if (button) applyFilter(button.dataset.filter);
+    });
+
+    document.getElementById("jumpBtn").addEventListener("click", event => {
+      const id = event.currentTarget.dataset.target;
+      const step = allSteps.find(item => item.id === Number(id));
+      const phase = document.querySelector(`[data-phase-id="${step.phaseId}"]`);
+      if (phase.hidden) applyFilter("all");
+      if (phase.classList.contains("collapsed")) phase.querySelector(".phase-head").click();
+      document.getElementById(`step-${id}`).scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
+    const fileInput = document.getElementById("fileInput");
+    ["importBtn", "mobileImportBtn"].forEach(id => document.getElementById(id).addEventListener("click", () => fileInput.click()));
+    ["exportBtn", "mobileExportBtn"].forEach(id => document.getElementById(id).addEventListener("click", exportProgress));
+    ["resetBtn", "mobileResetBtn"].forEach(id => document.getElementById(id).addEventListener("click", () => document.getElementById("resetDialog").showModal()));
+    fileInput.addEventListener("change", () => { if (fileInput.files[0]) importProgress(fileInput.files[0]); fileInput.value = ""; });
+    document.getElementById("themeBtn").addEventListener("click", toggleTheme);
+    document.getElementById("cancelResetBtn").addEventListener("click", () => document.getElementById("resetDialog").close());
+    document.getElementById("confirmResetBtn").addEventListener("click", () => {
+      state = defaultState();
+      saveState("已清空");
+      renderPhases();
+      document.getElementById("resetDialog").close();
+      showToast("全部进度已清空");
+    });
+
+    initTheme();
+    renderPhases();
+  </script>
+</body>
+</html>
+
